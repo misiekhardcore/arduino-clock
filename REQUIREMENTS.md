@@ -10,9 +10,10 @@ The clock should have the following features:
 - In the display mode:
   - The clock should show the current time when no button is pressed.
   - When the Second button is pressed the clock should show the date.
-  - When the Third button is pressed the clock should show the temperature and humidity.
+  - When the Third button is pressed the clock should show the temperature and humidity interchanging every 1 seconds.
   - When the Fourth button is pressed the clock should show the alarm.
 - In the settings mode:
+
   - Settings should be displayed blinking to indicate that we are in the settings mode.
   - When the First button is pressed we go through the settings.
   - There are the following settings:
@@ -24,3 +25,13 @@ The clock should have the following features:
   - When the Third button it changes the second setting.
   - When the Fourth button it changes the third setting.
 
+  I want this program to be properly divided into files/classes and folders.
+  I want to have classes for the following:
+
+  - Clock
+  - Display
+  - RTC
+  - Button
+  - Buzzer
+  - DHT11
+  - EEPROM
