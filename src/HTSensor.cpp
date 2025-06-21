@@ -9,12 +9,46 @@ void HTSensor::begin()
   dht.begin();
 }
 
-float HTSensor::getTemperature()
+void HTSensor::update()
 {
-  return dht.readTemperature();
+  // Sensor updates - only every 6 seconds
+  static unsigned long lastSensorUpdate = 0;
+  if (millis() - lastSensorUpdate >= 6000) // 6 seconds
+  {
+    temperature = (int8_t)dht.readTemperature();
+    delay(20);
+    humidity = (int8_t)dht.readHumidity();
+
+    lastSensorUpdate = millis();
+  }
 }
 
-float HTSensor::getHumidity()
+int8_t HTSensor::getTemperature()
 {
-  return dht.readHumidity();
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastUpdate >= UPDATE_INTERVAL)
+  {
+    int newTemp = dht.readTemperature();
+    if (!isnan(newTemp) && newTemp >= -50 && newTemp <= 100)
+    {
+      temperature = newTemp;
+    }
+    lastUpdate = currentMillis;
+  }
+  return temperature;
+}
+
+int8_t HTSensor::getHumidity()
+{
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastUpdate >= UPDATE_INTERVAL)
+  {
+    int newHum = dht.readHumidity();
+    if (!isnan(newHum) && newHum >= 0 && newHum <= 100)
+    {
+      humidity = newHum;
+    }
+    lastUpdate = currentMillis;
+  }
+  return humidity;
 }

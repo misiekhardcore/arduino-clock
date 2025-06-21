@@ -4,19 +4,33 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <RTClib.h>
-#include "Clock.h"
+
+// Time and Date structures
+struct Time
+{
+  uint8_t hour;
+  uint8_t minute;
+  uint8_t second;
+};
+
+struct Date
+{
+  uint8_t day;
+  uint8_t month;
+  uint16_t year;
+};
 
 class RTClock
 {
 private:
   RTC_DS1307 rtcModule;
-  int sdaPin;
-  int sclPin;
+  uint8_t sdaPin;
+  uint8_t sclPin;
 
 public:
   RTClock();
 
-  void begin(int sdaPin, int sclPin);
+  void begin(uint8_t sdaPin, uint8_t sclPin);
 
   // Time and date getters
   Time getTime();

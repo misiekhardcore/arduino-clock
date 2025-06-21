@@ -68,21 +68,50 @@ bool Button::isPressed() const
 bool Button::wasPressed()
 {
   bool result = wasPressedFlag;
-  wasPressedFlag = false;
+  if (result)
+  {
+    reset();
+  }
+  return result;
+}
+
+bool Button::wasSinglePressed()
+{
+  bool result = wasSinglePressedFlag;
+  if (result)
+  {
+    reset();
+  }
+  return result;
+}
+
+bool Button::wasLongPressed()
+{
+  bool result = wasLongPressedFlag;
+  if (result)
+  {
+    reset();
+  }
   return result;
 }
 
 bool Button::isSinglePressed()
 {
   bool result = wasSinglePressedFlag;
-  wasSinglePressedFlag = false;
+  if (result)
+  {
+    reset();
+  }
   return result;
 }
 
 bool Button::isLongPressed()
 {
   bool result = wasLongPressedFlag;
-  wasLongPressedFlag = false;
+  if (result)
+  {
+    reset();
+  }
   return result;
 }
 
@@ -95,17 +124,9 @@ unsigned long Button::getPressDuration() const
   return 0;
 }
 
-void Button::resetWasPressed()
+void Button::reset()
 {
   wasPressedFlag = false;
-}
-
-void Button::resetWasSinglePressed()
-{
   wasSinglePressedFlag = false;
-}
-
-void Button::resetWasLongPressed()
-{
   wasLongPressedFlag = false;
 }

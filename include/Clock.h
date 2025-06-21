@@ -2,76 +2,37 @@
 #define CLOCK_H
 
 #include <Arduino.h>
+#include "RTClock.h"
+#include "Timer.h"
+#include "Alarm.h"
+#include "HTSensor.h"
+
 
 // Forward declarations
-class RTClock;
-class HTSensor;
-
-struct Time
-{
-  uint8_t hour;
-  uint8_t minute;
-  uint8_t second;
-};
-
-struct Date
-{
-  uint8_t day;
-  uint8_t month;
-  uint16_t year;
-};
-
-struct AlarmTime
-{
-  uint8_t hour;
-  uint8_t minute;
-  bool enabled;
-};
-
-struct Timer
-{
-  uint8_t hour;
-  uint8_t minute;
-  uint8_t second;
-  bool running;
-  bool completed;
-};
+class Buzzer;
 
 class Clock
 {
 private:
   RTClock *rtc;
   HTSensor *dht11;
-
-  Time currentTime;
-  Date currentDate;
-  AlarmTime alarmTime;
+  Buzzer *buzzer;
+  Alarm alarm;
   Timer timer;
-
-  float temperature;
-  float humidity;
-
-  unsigned long lastUpdate;
-  unsigned long lastTempUpdate;
-  const unsigned long TEMP_UPDATE_INTERVAL = 2000; // Update temperature every 2 seconds
-
-  bool alarmTriggered;
-  unsigned long alarmStartTime;
-  const unsigned long ALARM_DURATION = 10000; // 10 seconds
 
 public:
   Clock();
 
-  void begin(RTClock *rtc, HTSensor *dht11);
+  void begin(RTClock *rtc, HTSensor *dht11, Buzzer *buzzer);
   void update();
 
   // Getters
   Time getTime() const;
   Date getDate() const;
-  AlarmTime getAlarmTime() const;
-  Timer getTimer() const;
-  float getTemperature() const;
-  float getHumidity() const;
+  AlarmData getAlarmTime();
+  TimerData getTimerTime();
+  int8_t getTemperature() const;
+  int8_t getHumidity() const;
 
   char *getTimeString() const;
   char *getDateString() const;
@@ -85,11 +46,11 @@ public:
   void loadSettings();
   void saveSettings();
 
-  // Alarm
+  // Alarm (delegated to Alarm class)
   bool isAlarmTriggered() const;
   void stopAlarm();
 
-  // Timer
+  // Timer (delegated to Timer class)
   void startTimer();
   void stopTimer();
   void resetTimer();

@@ -4,7 +4,7 @@ RTClock::RTClock() : sdaPin(0), sclPin(0)
 {
 }
 
-void RTClock::begin(int sdaPin, int sclPin)
+void RTClock::begin(uint8_t sdaPin, uint8_t sclPin)
 {
   this->sdaPin = sdaPin;
   this->sclPin = sclPin;
@@ -13,13 +13,12 @@ void RTClock::begin(int sdaPin, int sclPin)
 
   if (!rtcModule.begin())
   {
-    Serial.println("Couldn't find RTC");
+    return;
   }
   else
   {
     if (!rtcModule.isrunning())
     {
-      Serial.println("RTC is NOT running!");
       // Set the RTC to the date & time this sketch was compiled
       rtcModule.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }

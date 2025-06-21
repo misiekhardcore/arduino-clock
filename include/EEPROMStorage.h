@@ -3,7 +3,8 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
-#include "Clock.h"
+#include "RTClock.h"
+#include "Alarm.h"
 
 class EEPROMStorage
 {
@@ -16,16 +17,15 @@ private:
   {
     Time time;
     Date date;
-    AlarmTime alarm;
-    Timer timer;
+    AlarmData alarm;
   };
 
 public:
   EEPROMStorage();
 
   // Settings storage
-  void saveSettings(const Time &time, const Date &date, const AlarmTime &alarm, const Timer &timer);
-  bool loadSettings(Time &time, Date &date, AlarmTime &alarm, Timer &timer);
+  void saveSettings(const Time &time, const Date &date, const AlarmData &alarm);
+  bool loadSettings(Time &time, Date &date, AlarmData &alarm);
 
   // Utility methods
   bool hasValidSettings();

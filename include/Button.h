@@ -3,7 +3,8 @@
 
 #include <Arduino.h>
 
-class Button {
+class Button
+{
 private:
   int pin;
   bool lastState;
@@ -18,21 +19,21 @@ private:
 
 public:
   Button(int pin);
-  
+
   void begin();
   void update();
-  
+
   // State queries
-  bool isPressed() const;
   bool wasPressed();
+  bool wasSinglePressed();
+  bool wasLongPressed();
+  bool isPressed() const;
   bool isSinglePressed();
   bool isLongPressed();
   unsigned long getPressDuration() const;
-  
-  // Reset flags
-  void resetWasPressed();
-  void resetWasSinglePressed();
-  void resetWasLongPressed();
+
+  // Reset all flags
+  void reset();
 };
 
-#endif 
+#endif

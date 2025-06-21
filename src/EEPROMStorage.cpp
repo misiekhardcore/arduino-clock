@@ -5,13 +5,12 @@ EEPROMStorage::EEPROMStorage()
 {
 }
 
-void EEPROMStorage::saveSettings(const Time &time, const Date &date, const AlarmTime &alarm, const Timer &timer)
+void EEPROMStorage::saveSettings(const Time &time, const Date &date, const AlarmData &alarm)
 {
   Settings settings;
   settings.time = time;
   settings.date = date;
   settings.alarm = alarm;
-  settings.timer = timer;
 
   // Write magic number
   EEPROM.put(MAGIC_ADDRESS, MAGIC_NUMBER);
@@ -20,7 +19,7 @@ void EEPROMStorage::saveSettings(const Time &time, const Date &date, const Alarm
   writeSettings(settings);
 }
 
-bool EEPROMStorage::loadSettings(Time &time, Date &date, AlarmTime &alarm, Timer &timer)
+bool EEPROMStorage::loadSettings(Time &time, Date &date, AlarmData &alarm)
 {
   if (!hasValidSettings())
   {
@@ -33,7 +32,6 @@ bool EEPROMStorage::loadSettings(Time &time, Date &date, AlarmTime &alarm, Timer
     time = settings.time;
     date = settings.date;
     alarm = settings.alarm;
-    timer = settings.timer;
     return true;
   }
 
@@ -76,11 +74,6 @@ bool EEPROMStorage::readSettings(Settings &settings)
   }
 
   if (settings.alarm.hour > 23 || settings.alarm.minute > 59)
-  {
-    return false;
-  }
-
-  if (settings.timer.hour > 23 || settings.timer.minute > 59 || settings.timer.second > 59)
   {
     return false;
   }

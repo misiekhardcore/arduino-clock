@@ -1,119 +1,70 @@
 #include "Clock.h"
 #include "RTClock.h"
 #include "HTSensor.h"
+#include "Buzzer.h"
 #include "EEPROMStorage.h"
 
-Clock::Clock() : rtc(nullptr), dht11(nullptr), alarmTriggered(false), alarmStartTime(0)
+// PROGMEM constants to save RAM
+const char PROGMEM DEGREE_SYMBOL = '*';
+const char PROGMEM TEMP_UNIT = 'C';
+const char PROGMEM HUMIDITY_UNIT = 'H';
+
+Clock::Clock() : rtc(nullptr), dht11(nullptr), buzzer(nullptr)
 {
-  // Initialize with default values
-  currentTime = {12, 0, 0};
-  currentDate = {1, 1, 2024};
-  alarmTime = {7, 0, false};
-  timer = {0, 0, 0, false, false};
-  temperature = 0.0;
-  humidity = 0.0;
-  lastUpdate = 0;
-  lastTempUpdate = 0;
 }
 
-void Clock::begin(RTClock *rtc, HTSensor *dht11)
+void Clock::begin(RTClock *rtc, HTSensor *dht11, Buzzer *buzzer)
 {
   this->rtc = rtc;
   this->dht11 = dht11;
-  lastUpdate = millis();
-  lastTempUpdate = millis();
+  this->buzzer = buzzer;
+  timer.begin();
+  alarm.begin(buzzer);
 }
 
 void Clock::update()
 {
-  unsigned long currentMillis = millis();
-
-  // Update time from RTC
-  currentTime = rtc->getTime();
-  currentDate = rtc->getDate();
-
-  // Update temperature and humidity from sensor
-  temperature = dht11->getTemperature();
-  humidity = dht11->getHumidity();
-
-  // Check alarm (matching old Arduino program exactly)
-  if (alarmTime.enabled && !alarmTriggered)
-  {
-    if (currentTime.hour == alarmTime.hour && currentTime.minute == alarmTime.minute && currentTime.second < 30)
-    {
-      alarmTriggered = true;
-      alarmStartTime = currentMillis;
-    }
-  }
-
-  // Auto-stop alarm after duration
-  if (alarmTriggered && currentMillis - alarmStartTime >= ALARM_DURATION)
-  {
-    alarmTriggered = false;
-  }
-
   // Update timer
-  if (timer.running && !timer.completed)
-  {
-    // Decrease timer
-    if (timer.second > 0)
-    {
-      timer.second--;
-    }
-    else if (timer.minute > 0)
-    {
-      timer.minute--;
-      timer.second = 59;
-    }
-    else if (timer.hour > 0)
-    {
-      timer.hour--;
-      timer.minute = 59;
-      timer.second = 59;
-    }
-    else
-    {
-      timer.completed = true;
-      timer.running = false;
-    }
-  }
+  timer.update();
 
-  lastUpdate = currentMillis;
+  // Update alarm
+  Time currentTime = rtc->getTime();
+  alarm.update(currentTime);
+
+  // Update sensor
+  dht11->update();
 }
 
 Time Clock::getTime() const
 {
-  return currentTime;
+  return rtc->getTime();
 }
 
 Date Clock::getDate() const
 {
-  return currentDate;
+  return rtc->getDate();
 }
 
-AlarmTime Clock::getAlarmTime() const
+TimerData Clock::getTimerTime()
 {
-  return alarmTime;
+  return timer.getTime();
 }
 
-Timer Clock::getTimer() const
+int8_t Clock::getTemperature() const
 {
-  return timer;
+  return dht11->getTemperature();
 }
 
-float Clock::getTemperature() const
+int8_t Clock::getHumidity() const
 {
-  return temperature;
-}
-
-float Clock::getHumidity() const
-{
-  return humidity;
+  return dht11->getHumidity();
 }
 
 char *Clock::getTimeString() const
 {
   static char timeString[6];
+  Time currentTime = rtc->getTime();
+
   timeString[0] = '0' + currentTime.hour / 10;
   timeString[1] = '0' + currentTime.hour % 10;
   timeString[2] = '0' + currentTime.minute / 10;
@@ -126,22 +77,34 @@ char *Clock::getTimeString() const
 char *Clock::getDateString() const
 {
   static char dateString[6];
-  dateString[0] = '0' + currentDate.day / 10;
-  dateString[1] = '0' + currentDate.day % 10;
-  dateString[2] = '0' + currentDate.month / 10;
-  dateString[3] = '0' + currentDate.month % 10;
-  dateString[4] = '0' + (currentDate.year % 100) / 10;
-  dateString[5] = '0' + (currentDate.year % 100) % 10;
+  static unsigned long lastDateUpdate = 0;
+  static Date cachedDate = {1, 1, 2024};
+
+  // Cache date for 1 second to avoid multiple RTC calls
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastDateUpdate >= 1000)
+  {
+    cachedDate = rtc->getDate();
+    lastDateUpdate = currentMillis;
+  }
+
+  dateString[0] = '0' + cachedDate.day / 10;
+  dateString[1] = '0' + cachedDate.day % 10;
+  dateString[2] = '0' + cachedDate.month / 10;
+  dateString[3] = '0' + cachedDate.month % 10;
+  dateString[4] = '0' + (cachedDate.year % 100) / 10;
+  dateString[5] = '0' + (cachedDate.year % 100) % 10;
   return dateString;
 }
 
 char *Clock::getAlarmTimeString() const
 {
   static char alarmString[6];
-  alarmString[0] = '0' + alarmTime.hour / 10;
-  alarmString[1] = '0' + alarmTime.hour % 10;
-  alarmString[2] = '0' + alarmTime.minute / 10;
-  alarmString[3] = '0' + alarmTime.minute % 10;
+  AlarmData alarmData = alarm.getTime();
+  alarmString[0] = '0' + alarmData.hour / 10;
+  alarmString[1] = '0' + alarmData.hour % 10;
+  alarmString[2] = '0' + alarmData.minute / 10;
+  alarmString[3] = '0' + alarmData.minute % 10;
   alarmString[4] = '0';
   alarmString[5] = '0';
   return alarmString;
@@ -150,12 +113,13 @@ char *Clock::getAlarmTimeString() const
 char *Clock::getTimerString() const
 {
   static char timerString[6];
-  timerString[0] = '0' + timer.hour / 10;
-  timerString[1] = '0' + timer.hour % 10;
-  timerString[2] = '0' + timer.minute / 10;
-  timerString[3] = '0' + timer.minute % 10;
-  timerString[4] = '0' + timer.second / 10;
-  timerString[5] = '0' + timer.second % 10;
+  TimerData timerData = timer.getTime();
+  timerString[0] = '0' + timerData.hour / 10;
+  timerString[1] = '0' + timerData.hour % 10;
+  timerString[2] = '0' + timerData.minute / 10;
+  timerString[3] = '0' + timerData.minute % 10;
+  timerString[4] = '0' + timerData.second / 10;
+  timerString[5] = '0' + timerData.second % 10;
   return timerString;
 }
 
@@ -164,10 +128,10 @@ char *Clock::getTemperatureString() const
   static char temperatureString[6];
   temperatureString[0] = ' ';
   temperatureString[1] = ' ';
-  temperatureString[2] = '0' + (int)temperature / 10;
-  temperatureString[3] = '0' + (int)temperature % 10;
-  temperatureString[4] = '*';
-  temperatureString[5] = 'C';
+  temperatureString[2] = '0' + getTemperature() / 10;
+  temperatureString[3] = '0' + getTemperature() % 10;
+  temperatureString[4] = DEGREE_SYMBOL;
+  temperatureString[5] = TEMP_UNIT;
   return temperatureString;
 }
 
@@ -176,11 +140,16 @@ char *Clock::getHumidityString() const
   static char humidityString[6];
   humidityString[0] = ' ';
   humidityString[1] = ' ';
-  humidityString[2] = '0' + (int)this->humidity / 10;
-  humidityString[3] = '0' + (int)this->humidity % 10;
-  humidityString[4] = '*';
-  humidityString[5] = 'H';
+  humidityString[2] = '0' + getHumidity() / 10;
+  humidityString[3] = '0' + getHumidity() % 10;
+  humidityString[4] = DEGREE_SYMBOL;
+  humidityString[5] = HUMIDITY_UNIT;
   return humidityString;
+}
+
+AlarmData Clock::getAlarmTime()
+{
+  return alarm.getTime();
 }
 
 void Clock::adjustSetting(int setting, int part)
@@ -188,6 +157,8 @@ void Clock::adjustSetting(int setting, int part)
   switch (setting)
   {
   case 0: // Time
+  {
+    Time currentTime = rtc->getTime();
     switch (part)
     {
     case 0: // Hour
@@ -206,9 +177,12 @@ void Clock::adjustSetting(int setting, int part)
         rtc->setTime(currentTime);
       break;
     }
-    break;
+  }
+  break;
 
   case 1: // Date
+  {
+    Date currentDate = rtc->getDate();
     switch (part)
     {
     case 0: // Day
@@ -227,19 +201,37 @@ void Clock::adjustSetting(int setting, int part)
         rtc->setDate(currentDate);
       break;
     }
-    break;
+  }
+  break;
 
   case 2: // Alarm
     switch (part)
     {
     case 0: // Hour
-      alarmTime.hour = (alarmTime.hour + 1) % 24;
+      alarm.adjustHour();
       break;
     case 1: // Minute
-      alarmTime.minute = (alarmTime.minute + 1) % 60;
+      alarm.adjustMinute();
       break;
-    case 2: // Enable/Disable (not used in old program, but keeping for compatibility)
-      alarmTime.enabled = !alarmTime.enabled;
+    case 2: // Enable/Disable
+      if (alarm.isEnabled())
+        alarm.disable();
+      else
+        alarm.enable();
+      break;
+    }
+    break;
+  case 3: // Timer
+    switch (part)
+    {
+    case 0: // Hour
+      timer.adjustHour();
+      break;
+    case 1: // Minute
+      timer.adjustMinute();
+      break;
+    case 2: // Second
+      timer.adjustSecond();
       break;
     }
     break;
@@ -251,44 +243,50 @@ void Clock::loadSettings()
   EEPROMStorage eeprom;
   if (eeprom.hasValidSettings())
   {
-    eeprom.loadSettings(currentTime, currentDate, alarmTime, timer);
+    Time currentTime = rtc->getTime();
+    Date currentDate = rtc->getDate();
+    AlarmData alarmData;
+    eeprom.loadSettings(currentTime, currentDate, alarmData);
+    alarm.setTime(alarmData.hour, alarmData.minute);
+    if (alarmData.enabled)
+    {
+      alarm.enable();
+    }
+    else
+    {
+      alarm.disable();
+    }
   }
 }
 
 void Clock::saveSettings()
 {
   EEPROMStorage eeprom;
-  eeprom.saveSettings(currentTime, currentDate, alarmTime, timer);
+  AlarmData alarmData = alarm.getTime();
+  eeprom.saveSettings(rtc->getTime(), rtc->getDate(), alarmData);
 }
 
 bool Clock::isAlarmTriggered() const
 {
-  return alarmTriggered;
+  return alarm.isTriggered();
 }
 
 void Clock::stopAlarm()
 {
-  alarmTriggered = false;
+  alarm.stop();
 }
 
 void Clock::startTimer()
 {
-  if (!timer.completed)
-  {
-    timer.running = true;
-  }
+  timer.start();
 }
 
 void Clock::stopTimer()
 {
-  timer.running = false;
+  timer.stop();
 }
 
 void Clock::resetTimer()
 {
-  timer.running = false;
-  timer.completed = false;
-  timer.hour = 0;
-  timer.minute = 0;
-  timer.second = 0;
+  timer.reset();
 }
