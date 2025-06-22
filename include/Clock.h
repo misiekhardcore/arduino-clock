@@ -41,19 +41,28 @@ public:
   char *getTemperatureString() const;
   char *getHumidityString() const;
 
+  // RTC
+  void setTime(const Time &time);
+  void setDate(const Date &date);
+
   // Settings
   void adjustSetting(int setting, int part);
   void loadSettings();
   void saveSettings();
 
-  // Alarm (delegated to Alarm class)
+  // Alarm
   bool isAlarmTriggered() const;
   void stopAlarm();
+  void setAlarmTime(uint8_t hour, uint8_t minute);
+  void enableAlarm();
+  void disableAlarm();
+  void setAlarmData(const AlarmData &alarmData);
 
-  // Timer (delegated to Timer class)
+  // Timer
   void startTimer();
   void stopTimer();
   void resetTimer();
+  void setTimerTime(uint8_t hour, uint8_t minute, uint8_t second);
 };
 
 #endif

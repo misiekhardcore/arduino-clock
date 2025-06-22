@@ -8,6 +8,7 @@
 #include "EEPROMStorage.h"
 #include "Timer.h"
 #include "Alarm.h"
+#include "SerialCommandHandler.h"
 
 // DHT pin
 #define DHT_PIN A0
@@ -45,6 +46,7 @@ Button button3(BUTTON_3_PIN);
 Button button4(BUTTON_4_PIN);
 Buzzer buzzer(BUZZER_PIN);
 HTSensor dht11(DHT_PIN);
+SerialCommandHandler serialHandler;
 
 // Mode variables
 bool isSettingsMode = false;
@@ -69,23 +71,11 @@ uint8_t BLINK_INTERVAL = 50; // 50ms
 unsigned long lastSettingsExitTime = 0;
 uint16_t SETTINGS_EXIT_COOLDOWN = 2000; // 2 seconds
 
-// Serial input state variables
-// DISABLED: Serial input features to save memory
-// bool waitingForTimeInput = false;
-// bool waitingForDateInput = false;
-// String timeInputBuffer = "";
-// String dateInputBuffer = "";
-
 // Function declarations
 void enterSettingsMode();
 void exitSettingsMode();
 void handleDisplayMode();
 void handleSettingsMode();
-// DISABLED: Serial command functions to save memory
-// void handleSerialCommands();
-// void setRTCTime();
-// void setRTCDate();
-// void showHelp();
 
 void setup()
 {
@@ -112,17 +102,17 @@ void setup()
   // Initialize clock
   clock.begin(&rtc, &dht11, &buzzer);
 
+  // Initialize serial command handler
+  serialHandler.begin(&clock);
+
   // Load settings from EEPROM
   clock.loadSettings();
-
-  Serial.println("Type 'help' for available commands");
-  Serial.println("Type 'status' to see current time and sensor data");
 }
 
 void loop()
 {
   // Handle serial commands
-  // handleSerialCommands();
+  serialHandler.update();
 
   // Update button states
   button1.update();

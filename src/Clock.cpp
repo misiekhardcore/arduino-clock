@@ -287,3 +287,46 @@ void Clock::resetTimer()
 {
   timer.reset();
 }
+
+void Clock::setAlarmTime(uint8_t hour, uint8_t minute)
+{
+  alarm.setTime(hour, minute);
+}
+
+void Clock::enableAlarm()
+{
+  alarm.enable();
+}
+
+void Clock::disableAlarm()
+{
+  alarm.disable();
+}
+
+void Clock::setAlarmData(const AlarmData &alarmData)
+{
+  alarm.setTime(alarmData.hour, alarmData.minute);
+  if (alarmData.enabled)
+  {
+    alarm.enable();
+  }
+  else
+  {
+    alarm.disable();
+  }
+}
+
+void Clock::setTimerTime(uint8_t hour, uint8_t minute, uint8_t second)
+{
+  timer.setTime(hour, minute, second);
+}
+
+void Clock::setTime(const Time &time)
+{
+  rtc->setTime(time);
+}
+
+void Clock::setDate(const Date &date)
+{
+  rtc->setDate(date);
+}
