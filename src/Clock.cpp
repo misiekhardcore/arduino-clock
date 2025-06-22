@@ -30,9 +30,6 @@ void Clock::update()
   // Update alarm
   Time currentTime = rtc->getTime();
   alarm.update(currentTime);
-
-  // Update sensor
-  dht11->update();
 }
 
 Time Clock::getTime() const
